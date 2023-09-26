@@ -29,5 +29,6 @@ ADD demo/requirements.txt ./demo/requirements.txt
 RUN pip3 install --no-cache-dir -r demo/requirements.txt
 
 ADD demo ./demo
+RUN ls demo/runners
 
 ENTRYPOINT ["bash", "-c", "demo/ngrok-wait.sh \"$@\"", "--"]

@@ -16,6 +16,8 @@ from pygments.lexer import Lexer
 from pygments.lexers.data import JsonLdLexer
 from prompt_toolkit.formatted_text import FormattedText, PygmentsTokens
 
+import demo.runners.stats_time as stats_time
+
 
 COLORIZE = bool(os.getenv("COLORIZE", True))
 

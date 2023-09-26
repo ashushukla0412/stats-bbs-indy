@@ -5,7 +5,7 @@ import logging
 import os
 import random
 import sys
-import time
+from time import time
 import yaml
 
 from qrcode import QRCode
@@ -13,6 +13,8 @@ from qrcode import QRCode
 from aiohttp import ClientError
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import demo.runners.stats_time as stats_time
 
 from runners.support.agent import (  # noqa:E402
     DemoAgent,
@@ -185,7 +187,7 @@ class AriesAgent(DemoAgent):
                 f"/issue-credential/records/{credential_exchange_id}/send-request"
             )
 
-        elif state == "credential_acked":
+        if state == "credential_acked":
             cred_id = message["credential_id"]
             self.log(f"Stored credential {cred_id} in wallet")
             log_status(f"#18.1 Stored credential {cred_id} in wallet")
@@ -199,36 +201,36 @@ class AriesAgent(DemoAgent):
             self.log("credential_definition_id", message["credential_definition_id"])
             self.log("schema_id", message["schema_id"])
 
-        elif state == "request_received":
-            log_status("#17 Issue credential to X")
-            # issue credentials based on the credential_definition_id
-            cred_attrs = self.cred_attrs[message["credential_definition_id"]]
-            cred_preview = {
-                "@type": CRED_PREVIEW_TYPE,
-                "attributes": [
-                    {"name": n, "value": v} for (n, v) in cred_attrs.items()
-                ],
-            }
-            try:
-                cred_ex_rec = await self.admin_POST(
-                    f"/issue-credential/records/{credential_exchange_id}/issue",
-                    {
-                        "comment": (
-                            f"Issuing credential, exchange {credential_exchange_id}"
-                        ),
-                        "credential_preview": cred_preview,
-                    },
-                )
-                rev_reg_id = cred_ex_rec.get("revoc_reg_id")
-                cred_rev_id = cred_ex_rec.get("revocation_id")
-                if rev_reg_id:
-                    self.log(f"Revocation registry ID: {rev_reg_id}")
-                if cred_rev_id:
-                    self.log(f"Credential revocation ID: {cred_rev_id}")
-            except ClientError:
-                pass
+        # elif state == "request_received":
+        #     log_status("#17 Issue credential to X")
+        #     # issue credentials based on the credential_definition_id
+        #     cred_attrs = self.cred_attrs[message["credential_definition_id"]]
+        #     cred_preview = {
+        #         "@type": CRED_PREVIEW_TYPE,
+        #         "attributes": [
+        #             {"name": n, "value": v} for (n, v) in cred_attrs.items()
+        #         ],
+        #     }
+        #     try:
+        #         cred_ex_rec = await self.admin_POST(
+        #             f"/issue-credential/records/{credential_exchange_id}/issue",
+        #             {
+        #                 "comment": (
+        #                     f"Issuing credential, exchange {credential_exchange_id}"
+        #                 ),
+        #                 "credential_preview": cred_preview,
+        #             },
+        #         )
+        #         rev_reg_id = cred_ex_rec.get("revoc_reg_id")
+        #         cred_rev_id = cred_ex_rec.get("revocation_id")
+        #         if rev_reg_id:
+        #             self.log(f"Revocation registry ID: {rev_reg_id}")
+        #         if cred_rev_id:
+        #             self.log(f"Credential revocation ID: {cred_rev_id}")
+        #     except ClientError:
+        #         pass
 
-        elif state == "abandoned":
+        if state == "abandoned":
             log_status("Credential exchange abandoned")
             self.log("Problem report message:", message.get("error_msg"))
 
@@ -245,30 +247,41 @@ class AriesAgent(DemoAgent):
         if state == "request-received":
             log_status("#17 Issue credential to X")
             # issue credential based on offer preview in cred ex record
+            stats_time.issue_credential_time_start = time()
             await self.admin_POST(
                 f"/issue-credential-2.0/records/{cred_ex_id}/issue",
                 {"comment": f"Issuing credential, exchange {cred_ex_id}"},
             )
+            stats_time.issue_credential_time_end = time()
 
         elif state == "offer-received":
             log_status("#15 After receiving credential offer, send credential request")
             if message["by_format"]["cred_offer"].get("indy"):
+                stats_time.request_sent_time_start = time()
                 await self.admin_POST(
                     f"/issue-credential-2.0/records/{cred_ex_id}/send-request"
                 )
+                stats_time.request_sent_time_end = time()
             elif message["by_format"]["cred_offer"].get("ld_proof"):
                 holder_did = await self.admin_POST(
                     "/wallet/did/create",
                     {"method": "key", "options": {"key_type": "bls12381g2"}},
                 )
                 data = {"holder_did": holder_did["result"]["did"]}
+                stats_time.request_sent_time_start = time()
                 await self.admin_POST(
                     f"/issue-credential-2.0/records/{cred_ex_id}/send-request", data
                 )
+                stats_time.request_sent_time_end = time()
 
         elif state == "done":
-            pass
-            # Logic moved to detail record specific handler
+            f_send = open("time_faber-send-offer.txt", "a")
+            f_request = open("time_alice-send-request.txt", "a")
+            f_issue = open("time_faber-issue.txt", "a")
+            f_send.write(str(stats_time.offer_sent_time_end - stats_time.offer_sent_time_start) + "\n")
+            f_request.write(str(stats_time.request_sent_time_end - stats_time.request_sent_time_start)+ "\n")
+            f_issue.write(str(stats_time.issue_credential_time_end - stats_time.issue_credential_time_start)+ "\n")
+            stats_time.cred_state_done = True
 
         elif state == "abandoned":
             log_status("Credential exchange abandoned")
@@ -666,7 +679,7 @@ class AgentContainer:
         genesis_txn_list: str = None,
         tails_server_base_url: str = None,
         cred_type: str = CRED_FORMAT_INDY,
-        show_timing: bool = False,
+        show_timing: bool = True,
         multitenant: bool = False,
         mediation: bool = False,
         use_did_exchange: bool = False,
@@ -957,7 +970,7 @@ class AgentContainer:
             if self.revocation:
                 non_revoked_supplied = False
                 # plug in revocation where requested in the supplied proof request
-                non_revoked = {"to": int(time.time())}
+                non_revoked = {"to": int(time())}
                 if "non_revoked" in proof_request:
                     indy_proof_request["non_revoked"] = non_revoked
                     non_revoked_supplied = True

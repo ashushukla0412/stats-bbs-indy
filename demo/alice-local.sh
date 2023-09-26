@@ -21,13 +21,13 @@ PYTHONPATH=.. ../bin/aca-py start \
    --trace-tag acapy.events \
    --trace-label alice.agent.trace \
    --auto-ping-connection \
-   --auto-respond-messages \
-   --auto-accept-invites \
-   --auto-accept-requests \
-   --auto-respond-credential-proposal \
-   --auto-respond-credential-offer \
-   --auto-respond-credential-request \
-   --auto-store-credential
+   --auto-respond-messages 
+   # --auto-accept-invites \
+   # --auto-accept-requests \
+   # --auto-respond-credential-proposal \
+   # --auto-respond-credential-offer \
+   # --auto-respond-credential-request \
+   # --auto-store-credential
 
 # set these for full auto
 #   --auto-respond-presentation-proposal \
