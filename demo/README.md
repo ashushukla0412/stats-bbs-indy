@@ -5,7 +5,8 @@ To create stats this repo uses existing Faber & Alice Demo. Faber issues `num_cr
 Steps-
 1. cd into `demo` folder
 2. Run 2 terminals in demo folder, one for Faber other for Alice
-3. To run Faber docker -
+3. To run Faber docker (either one of a. or b.) -
+   
 	a. for BBS+ use
 	```
 	LEDGER_URL=http://dev.greenlight.bcovrin.vonx.io ./run_demo faber --did-exchange --aip 20 --cred-type json-ld
@@ -14,7 +15,7 @@ Steps-
 	```
 	LEDGER_URL=http://dev.greenlight.bcovrin.vonx.io ./run_demo faber --did-exchange --aip 20
 	```
-4. For Alice run (for both BBS+ or AnonCreds)
+5. For Alice run (for both BBS+ or AnonCreds)
 ```
 LEDGER_URL=http://dev.greenlight.bcovrin.vonx.io ./run_demo alice
 ```
