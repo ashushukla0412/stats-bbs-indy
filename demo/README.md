@@ -7,7 +7,7 @@ Steps-
 2. Run 2 terminals in demo folder, one for Faber other for Alice
 3. To run Faber docker (either one of a. or b.) -
    
-	a. for BBS+ use
+	a. for BBS+ use (Ledger URL is just required, not actually used as not needed for bbs+)
 	```
 	LEDGER_URL=http://dev.greenlight.bcovrin.vonx.io ./run_demo faber --did-exchange --aip 20 --cred-type json-ld
 	```
