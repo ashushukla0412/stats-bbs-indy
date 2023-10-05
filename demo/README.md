@@ -2,6 +2,9 @@
 
 To create stats this repo uses existing Faber & Alice Demo. Faber issues `num_credentials` credentials to Alice. Whether the VC is JSON-LD BBS+ or AnonCreds (aka Indy) depends on commands used to run their Dockers.
 
+About code-
+Main code changes are in folder `demo/runners/`. Logs are using variables defined in `stats_time.py`. `data_size` is defined in `faber.py`. 
+
 Steps-
 1. cd into `demo` folder
 2. Run 2 terminals in demo folder, one for Faber other for Alice
