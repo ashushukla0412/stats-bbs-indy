@@ -64,10 +64,42 @@ async def issue_credentials(faber_agent):
             f"Error invalid credential type: {faber_agent.cred_type}"
         )
 
-    await faber_agent.agent.admin_POST(
+    resp = await faber_agent.agent.admin_POST(
         "/issue-credential-2.0/send-offer", offer_request
     )
+    return resp
 
+async def request_proof(faber_agent):
+    exchange_tracing = False
+    if faber_agent.cred_type == CRED_FORMAT_INDY:
+        proof_request_web_request = (
+            faber_agent.agent.generate_proof_request_web_request(
+                faber_agent.aip,
+                faber_agent.cred_type,
+                faber_agent.revocation,
+                exchange_tracing,
+            )
+        )
+
+    elif faber_agent.cred_type == CRED_FORMAT_JSON_LD:
+        proof_request_web_request = (
+            faber_agent.agent.generate_proof_request_web_request(
+                faber_agent.aip,
+                faber_agent.cred_type,
+                faber_agent.revocation,
+                exchange_tracing,
+            )
+        )
+
+    else:
+        raise Exception(
+            "Error invalid credential type:" + faber_agent.cred_type
+        )
+
+    resp = await faber_agent.agent.admin_POST(
+        "/present-proof-2.0/send-request", proof_request_web_request
+    )
+    return resp
 class FaberAgent(AriesAgent):
     def __init__(
         self,
@@ -139,11 +171,21 @@ class FaberAgent(AriesAgent):
             return offer_request
 
         elif aip == 20:
+            data_size = 1000
+            cred_subject = {
+                "type": ["PermanentResident"],
+                "givenName": "ALICE"+str(index),
+                "familyName": "SMITH",
+                "gender": "Female",
+                "birthCountry": "Bahamas",
+                "birthDate": "1958-07-17",
+                "lprCategory": "a"*data_size,
+            }  
             if cred_type == CRED_FORMAT_INDY:
                 self.cred_attrs[cred_def_id] = {
                     "name": "Alice Smith" + str(index),
                     "date": "2018-05-28",
-                    "degree": "Maths",
+                    "degree": "a"*data_size,
                     "birthdate_dateint": birth_date.strftime(birth_date_format),
                     "timestamp": str(int(time())),
                 }
@@ -183,14 +225,7 @@ class FaberAgent(AriesAgent):
                                 "id": "https://credential.example.com/residents/1234567890",
                                 "issuer": self.did,
                                 "issuanceDate": "2020-01-01T12:00:00Z",
-                                "credentialSubject": {
-                                    "type": ["PermanentResident"],
-                                    "givenName": "ALICE"+str(index),
-                                    "familyName": "SMITH",
-                                    "gender": "Female",
-                                    "birthCountry": "Bahamas",
-                                    "birthDate": "1958-07-17",
-                                },
+                                "credentialSubject": cred_subject,
                             },
                             "options": {"proofType": SIG_TYPE_BLS},
                         }
@@ -473,14 +508,24 @@ async def main(args):
         stats.num_credentials = int(input('Enter num of credentials to issue: '))
 
         while stats.curr_cred_index < stats.num_credentials:
-            if stats.cred_state_done:
-                stats.curr_cred_index += 1
-                stats.cred_state_done = False
+            if stats.cred_state_done_request:
+                stats.cred_state_done_issue = False
+                stats.cred_state_done_request = False
                 stats.offer_sent_time_start = time()         
-                await issue_credentials(faber_agent)
-                stats.offer_sent_time_end = time()        
-            else:
-                await asyncio.sleep(0.1)
+                resp = await issue_credentials(faber_agent)
+                stats.offer_sent_time_end = time()
+            
+
+            if stats.cred_state_done_issue:
+                stats.cred_state_done_request = False
+                stats.cred_state_done_issue = False
+                stats.proof_request_time_start = time()
+                resp = await request_proof(faber_agent)
+                stats.proof_request_time_end = time()
+                stats.curr_cred_index += 1
+            
+            await asyncio.sleep(0.1)
+
         print('DONE ALL')
 
         if faber_agent.show_timing:

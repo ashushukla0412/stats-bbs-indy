@@ -281,7 +281,7 @@ class AriesAgent(DemoAgent):
             f_send.write(str(stats_time.offer_sent_time_end - stats_time.offer_sent_time_start) + "\n")
             f_request.write(str(stats_time.request_sent_time_end - stats_time.request_sent_time_start)+ "\n")
             f_issue.write(str(stats_time.issue_credential_time_end - stats_time.issue_credential_time_start)+ "\n")
-            stats_time.cred_state_done = True
+            stats_time.cred_state_done_issue = True
 
         elif state == "abandoned":
             log_status("Credential exchange abandoned")
@@ -429,6 +429,7 @@ class AriesAgent(DemoAgent):
 
                 try:
                     # select credentials to provide for the proof
+
                     creds = await self.admin_GET(
                         f"/present-proof-2.0/records/{pres_ex_id}/credentials"
                     )
@@ -448,7 +449,7 @@ class AriesAgent(DemoAgent):
                                 if referent not in creds_by_reft:
                                     creds_by_reft[referent] = row
 
-                    # submit the proof wit one unrevealed revealed attribute
+                    # submit the proof with one unrevealed revealed attribute
                     revealed_flag = False
                     for referent in pres_request_indy["requested_attributes"]:
                         if referent in creds_by_reft:
@@ -551,20 +552,33 @@ class AriesAgent(DemoAgent):
                     pass
 
             log_status("#26 Send the proof to X: " + json.dumps(request))
+            stats_time.proof_send_pres_time_start = time()
             await self.admin_POST(
                 f"/present-proof-2.0/records/{pres_ex_id}/send-presentation",
                 request,
             )
+            stats_time.proof_send_pres_time_end = time()
 
         elif state == "presentation-received":
             # verifier role
             log_status("#27 Process the proof provided by X")
             log_status("#28 Check if proof is valid")
+            stats_time.proof_t1 = time()
             proof = await self.admin_POST(
                 f"/present-proof-2.0/records/{pres_ex_id}/verify-presentation"
             )
+            stats_time.proof_t2 = time()
+            f_pcheck = open("time_faber-verify-pres.txt", "a")
+            f_pcheck.write(str(stats_time.proof_t2 - stats_time.proof_t1)+ "\n")
             self.log("Proof =", proof["verified"])
             self.last_proof_received = proof
+        
+        elif state == "done":
+            f_prequest = open("time_faber-requ-proof.txt", "a")
+            f_psend = open("time_alice-send-pres.txt", "a")
+            f_prequest.write(str(stats_time.proof_request_time_end - stats_time.proof_request_time_start) + "\n")
+            f_psend.write(str(stats_time.proof_send_pres_time_end - stats_time.proof_send_pres_time_start)+ "\n")
+            stats_time.cred_state_done_request = True
 
         elif state == "abandoned":
             log_status("Presentation exchange abandoned")
