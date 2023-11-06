@@ -1,0 +1,21 @@
+{
+  "name": "w3c-demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "faber": "ts-node src/faber.ts ",
+    "alice": "ts-node src/alice.ts "
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aries-framework/bbs-signatures": "0.4.2",
+    "@aries-framework/core": "0.4.2",
+    "@aries-framework/indy-sdk": "0.4.2",
+    "@aries-framework/node": "0.4.2",
+    "indy-sdk": "1.16.0-dev-1655"
+  }
+}
